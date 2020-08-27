@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context" xmlns:jdbc="http://www.springframework.org/schema/jdbc"  
+	xmlns:jee="http://www.springframework.org/schema/jee" xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.2.xsd
+		http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc-3.2.xsd
+		http://www.springframework.org/schema/jee http://www.springframework.org/schema/jee/spring-jee-3.2.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.2.xsd"
+	default-lazy-init="true">
+
+	<description>Spring Configuration</description>
+	
+    <!-- 加载配置属性文件 -->
+	<context:property-placeholder ignore-unresolvable="true" location="classpath*:/surekam.properties" />
+	
+	<bean id="globalEventListener" class="com.surekam.modules.act.utils.GlobalEventListener">  
+	   <property name="handlers">  
+	   <map>  
+	   <entry key="TASK_CREATED" value="taskCreateListener"/>  
+<!-- 	   <entry key="TASK_COMPLETED" value="taskCompleteListener"/>   -->
+<!-- 	   <entry key="TASK_ASSIGNED" value="taskAssignedListener"/>   -->
+<!-- 	   <entry key="PROCESS_COMPLETED" value="processCompleteListener"/>   -->
+<!-- 	   <entry key="ACTIVITY_STARTED" value="activityStartedListener"/>   -->
+<!-- 	   <entry key="ACTIVITY_COMPLETED" value="activityCompletedListener"/>   -->
+<!-- 	   <entry key="ACTIVITY_SIGNALED" value="activitySignaledListener"/>   -->
+	   </map>  
+	   </property>  
+	</bean>  
+
+	<!-- Activiti begin -->
+	<bean id="processEngineConfiguration" class="org.activiti.spring.SpringProcessEngineConfiguration">
+		<property name="dataSource" ref="dataSource" />
+		<property name="transactionManager" ref="transactionManager" />
+		<property name="databaseSchemaUpdate" value="true" /><!-- 自动建表，自动更新表结构 -->
+		<property name="jobExecutorActivate" value="true" /><!-- 该参数将启用定时相关的功能 -->
+		<property name="history" value="full" />
+		<!-- UUID作为主键生成策略 -->
+		<property name="idGenerator" ref="idGen" />
+		
+		<!-- 生成流程图的字体 -->
+		<property name="activityFontName" value="${activiti.diagram.activityFontName}"/>
+		<property name="labelFontName" value="${activiti.diagram.labelFontName}"/>
+		<property name="annotationFontName" value="${activiti.diagram.annotationFontName}"/><!-- 5.21.0 新增参数 -->
+		
+		<!-- 自定义用户权限 ，必须重新实现用户和组的相应方法-->
+		<property name="customSessionFactories"> 
+			<list>
+				<bean class="com.surekam.modules.act.service.ext.ActUserEntityServiceFactory"/>
+				<bean class="com.surekam.modules.act.service.ext.ActGroupEntityServiceFactory"/>
+			</list>
+		</property>
+		
+		<property name="deploymentResources" value="classpath*:/act/deployments/**/*.bar"/><!-- 自动部署 -->
+		<!-- 自动部署 -->
+<!-- 		<property name="deploymentResources">
+			<list>
+				<value>classpath*:/deployments/*</value>
+			</list>
+		</property> -->
+		
+		<property name="eventListeners">
+	      <list>
+	          <ref bean="globalEventListener"/>
+	      </list>
+	    </property>
+	</bean>
+
+	<bean id="processEngine" class="org.activiti.spring.ProcessEngineFactoryBean">
+		<property name="processEngineConfiguration" ref="processEngineConfiguration" />
+	</bean>
+	
+	<bean id="taskCreateListener" class="com.surekam.modules.act.utils.TaskCreateListener">
+	</bean>
+
+	<bean id="repositoryService" factory-bean="processEngine" factory-method="getRepositoryService" />
+	<bean id="runtimeService" factory-bean="processEngine" factory-method="getRuntimeService" />
+	<bean id="formService" factory-bean="processEngine" factory-method="getFormService" />
+	<bean id="identityService" factory-bean="processEngine" factory-method="getIdentityService" />
+	<bean id="taskService" factory-bean="processEngine" factory-method="getTaskService" />
+	<bean id="historyService" factory-bean="processEngine" factory-method="getHistoryService" />
+	<bean id="managementService" factory-bean="processEngine" factory-method="getManagementService" />
+	<!-- Activiti end -->
+	
+		<!-- 设置默认的资源类型 -->
+	<bean id="contentTypeResolver" class="org.activiti.rest.common.application.DefaultContentTypeResolver" />
+</beans>
